@@ -4,6 +4,7 @@ import Header from "./Components/Header";
 import FileDisplay from "./Components/FileDisplay";
 import Information from "./Components/Information";
 import Transcribing from "./Components/Transcribing";
+import { MessageTypes } from "./Utils/preset";
 function App() {
   const [file, setfile] = useState(null);
   const [audiostream, setaudiostream] = useState(null);
@@ -38,17 +39,41 @@ function App() {
           break;
         case 'RESULT':
           setoutput(e.data.results)
-     
+
           break;
         case 'INFERENCE_DONE':
-         setfinished(true)
-         console.log("DONE")
+          setfinished(true)
+          console.log("DONE")
           break;
       }
     }
 
+    worker.current.addEventListener('message', onMessageReceived)
 
-  },[])
+    return () => worker.current.removeEventListener('message', onMessageReceived)
+  }, [])
+
+  async function readAudioFrom(file) {
+    const sampling_rate = 16000
+    const audioCtx = new AudioContext({ sampleRate: sampling_rate });
+    const response = await file.arrayBuffer()
+    const decoded = await audioCtx.decodeAudioData(response)
+    const audio = decoded.getChannelData(0)
+    return audio
+  }
+
+  async function handleFormSubmission() {
+    if (!file && !audiostream) { return }
+    let audio = await readAudioFrom(file ? file : audiostream)
+    const model_name = `openai/whisper-tiny.en`
+
+    worker.current.postMessage({
+      type: MessageTypes.INFERENCE_REQUEST,
+      // audio: 
+      // model_name:
+    })
+  }
+
   return (
     <div className='`flex flex-col  max-w-[1000px] mx-auto w-full'>
       <section className='min-h-screen flex flex-col'>
